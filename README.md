@@ -1,4 +1,4 @@
-# Scrap Mechanic Blueprint API
+# scrap-blueprint
 
 A Typescript library for building and editing Scrap Mechanic blueprint files.
 
