@@ -109,11 +109,9 @@ export class Child extends Shape {
     }
 
     checkController() {
-        if (!this.fileChild.controller) {
-            throw new Error(
-                "Attempt to use controller operation on a non-interactive part"
-            );
-        }
+        this.fileChild.controller = this.fileChild.controller ?? {
+            id: getId(),
+        };
     }
 
     connectTo(other: Child) {
