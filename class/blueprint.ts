@@ -202,7 +202,7 @@ export class Blocks extends Child {
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
-        return "bounds" in potential ? new Blocks(potential.fileChild) : undefined;
+        return "bounds" in potential.fileChild ? new Blocks(potential.fileChild) : undefined;
     }
 
     get bounds() {
@@ -320,7 +320,7 @@ export class PistonJoint extends Joint {
     static convert(potential: Joint) {
         // @ts-ignore
         // prettier-ignore
-        return "controller" in potential.fileJoint && potential.controller.length !== undefined ? new PistonJoint(potential.fileJoint) : undefined;
+        return "controller" in potential.fileJoint && potential.fileJoint.controller.length !== undefined ? new PistonJoint(potential.fileJoint) : undefined;
     }
 
     protected updateValues() {
@@ -406,7 +406,7 @@ export class SuspensionJoint extends Joint {
     static convert(potential: Joint) {
         // @ts-ignore
         // prettier-ignore
-        return "controller" in potential.fileJoint && potential.controller.stiffnessLevel !== undefined ? new SuspensionJoint(potential.fileJoint) : undefined;
+        return "controller" in potential.fileJoint && potential.fileJoint.controller.stiffnessLevel !== undefined ? new SuspensionJoint(potential.fileJoint) : undefined;
     }
 
     protected updateValues() {
@@ -462,7 +462,7 @@ export class ControllerPart extends Child {
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
-        return "controller" in potential.fileChild && potential.controller.timePerFrame !== undefined ? new ControllerPart(potential.fileChild) : undefined;
+        return "controller" in potential.fileChild && potential.fileChild.controller.timePerFrame !== undefined ? new ControllerPart(potential.fileChild) : undefined;
     }
 
     setSequence(
@@ -615,7 +615,7 @@ export class LogicGatePart extends Child {
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
-        return "controller" in potential.fileChild && potential.controller.mode !== undefined ? new LogicGatePart(potential.fileChild) : undefined;
+        return "controller" in potential.fileChild && potential.fileChild.controller.mode !== undefined ? new LogicGatePart(potential.fileChild) : undefined;
     }
 
     get mode(): LogicMode {
@@ -665,7 +665,7 @@ export class SensorPart extends Child {
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
-        return "controller" in potential.fileChild && potential.controller.range !== undefined ? new SensorPart(potential.fileChild) : undefined;
+        return "controller" in potential.fileChild && potential.fileChild.controller.range !== undefined ? new SensorPart(potential.fileChild) : undefined;
     }
 
     get audioEnabled() {
@@ -737,7 +737,7 @@ export class EnginePart extends Child {
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
-        return "controller" in potential.fileChild && potential.controller.data !== undefined && potential.shapeId !== UUID("Horn") ? new EnginePart(potential.fileChild) : undefined;
+        return "controller" in potential.fileChild && potential.fileChild.controller.data !== undefined && potential.shapeId !== UUID("Horn") ? new EnginePart(potential.fileChild) : undefined;
     }
 
     get level() {
@@ -786,7 +786,7 @@ export class ThrusterPart extends Child {
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
-        return "controller" in potential.fileChild && potential.controller.level !== undefined ? new ThrusterPart(potential.fileChild) : undefined;
+        return "controller" in potential.fileChild && potential.fileChild.controller.level !== undefined ? new ThrusterPart(potential.fileChild) : undefined;
     }
 
     get level() {
@@ -990,7 +990,7 @@ export class LightPart extends Child {
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
-        return "controller" in potential && "luminance" in potential.controller ? new LightPart(potential.fileChild) : undefined;
+        return "controller" in potential.fileChild && "luminance" in potential.fileChild.controller ? new LightPart(potential.fileChild) : undefined;
     }
 
     get luminance() {
@@ -1039,7 +1039,7 @@ export class TotebotPart extends Child {
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
-        return "controller" in potential && "audioIndex" in potential.controller ? new TotebotPart(potential.fileChild) : undefined;
+        return "controller" in potential.fileChild && "audioIndex" in potential.fileChild.controller ? new TotebotPart(potential.fileChild) : undefined;
     }
 
     get pitch() {

@@ -1,9 +1,12 @@
 {
     "name": "scrap-blueprint",
-    "version": "1.0.3",
+    "version": "1.0.5",
     "description": "A Typescript library for building and editing Scrap Mechanic blueprint files.",
-    "main": "index.js",
-    "scripts": {},
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "prepublish": "tsc"
+    },
     "keywords": [
         "scrap mechanic"
     ],
