@@ -113,6 +113,25 @@ export function UUID(name: keyof typeof uuids) {
     return uuids[name];
 }
 
+const driverSeats = [
+    UUID("Driver's Seat"),
+    UUID("Driver's Seat 1"),
+    UUID("Driver's Seat 2"),
+    UUID("Driver's Seat 3"),
+    UUID("Driver's Seat 4"),
+    UUID("Driver's Seat 5"),
+
+    UUID("Driver's Saddle"),
+    UUID("Driver's Saddle 1"),
+    UUID("Driver's Saddle 2"),
+    UUID("Driver's Saddle 3"),
+    UUID("Driver's Saddle 4"),
+    UUID("Driver's Saddle 5"),
+];
+export function isDriverSeat(shapeId: string) {
+    return driverSeats.includes(shapeId);
+}
+
 export const engineLevels = [
     "8CBMVUEAAAABBQAAAAICAAAABoBiYXR0ZXJ5UG9pbnRzCAAEAAAAB2dlYXJJZHgIAQ",
     "8CBMVUEAAAABBQAAAAICAAAABoBiYXR0ZXJ5UG9pbnRzCAAEAAAAB2dlYXJJZHgIAg",

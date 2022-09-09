@@ -36,6 +36,7 @@ import {
     logicGateModes,
     engineLevels,
     hornLevels,
+    isDriverSeat,
 } from "../util";
 import { Vector3 } from "./vector3";
 import { Direction } from "readline";
@@ -73,6 +74,11 @@ export class Child extends Shape {
             getRotationPositionOffset(fileChild.xaxis, fileChild.zaxis)
         );
         fileChild._childId = fileChild._childId ?? getId();
+    }
+    static convert(potential: Shape) {
+        // @ts-ignore
+        // prettier-ignore
+        return "pos" in potential.fileShape ? new Child(potential.fileShape) : undefined;
     }
 
     private desiredPosition: Vector3;
@@ -165,6 +171,9 @@ export class Part extends Child {
             color: color ?? getDefaultColor(shapeId),
         });
     }
+    static convert(potential: Child) {
+        return new Part(potential.fileChild);
+    }
 }
 
 export class Blocks extends Child {
@@ -189,6 +198,11 @@ export class Blocks extends Child {
             color: color ?? getDefaultColor(shapeId),
             bounds: bounds.toFileVec3(),
         });
+    }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return "bounds" in potential ? new Blocks(potential.fileChild) : undefined;
     }
 
     get bounds() {
@@ -303,6 +317,11 @@ export class PistonJoint extends Joint {
         piston.updateValues();
         return piston;
     }
+    static convert(potential: Joint) {
+        // @ts-ignore
+        // prettier-ignore
+        return "controller" in potential.fileJoint && potential.controller.length !== undefined ? new PistonJoint(potential.fileJoint) : undefined;
+    }
 
     protected updateValues() {
         super.updateValues();
@@ -337,6 +356,11 @@ export class BearingJoint extends Joint {
         super(fileJoint);
     }
     static create = Joint._internalCreate.bind(undefined, UUID("Bearing"));
+    static convert(potential: Joint) {
+        // @ts-ignore
+        // prettier-ignore
+        return !("controller" in potential.fileJoint) ? new BearingJoint(potential.fileJoint) : undefined;
+    }
 }
 
 export class SuspensionJoint extends Joint {
@@ -378,6 +402,11 @@ export class SuspensionJoint extends Joint {
         );
         suspension.updateValues();
         return suspension;
+    }
+    static convert(potential: Joint) {
+        // @ts-ignore
+        // prettier-ignore
+        return "controller" in potential.fileJoint && potential.controller.stiffnessLevel !== undefined ? new SuspensionJoint(potential.fileJoint) : undefined;
     }
 
     protected updateValues() {
@@ -429,6 +458,11 @@ export class ControllerPart extends Child {
                 id: getId(),
             },
         });
+    }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return "controller" in potential.fileChild && potential.controller.timePerFrame !== undefined ? new ControllerPart(potential.fileChild) : undefined;
     }
 
     setSequence(
@@ -578,6 +612,11 @@ export class LogicGatePart extends Child {
             },
         });
     }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return "controller" in potential.fileChild && potential.controller.mode !== undefined ? new LogicGatePart(potential.fileChild) : undefined;
+    }
 
     get mode(): LogicMode {
         return logicGateModeNames[this.fileLogicGate.controller.mode];
@@ -622,6 +661,11 @@ export class SensorPart extends Child {
                 color: filterColor,
             },
         });
+    }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return "controller" in potential.fileChild && potential.controller.range !== undefined ? new SensorPart(potential.fileChild) : undefined;
     }
 
     get audioEnabled() {
@@ -690,6 +734,11 @@ export class EnginePart extends Child {
             },
         });
     }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return "controller" in potential.fileChild && potential.controller.data !== undefined && potential.shapeId !== UUID("Horn") ? new EnginePart(potential.fileChild) : undefined;
+    }
 
     get level() {
         const index = engineLevels.findIndex(
@@ -734,6 +783,11 @@ export class ThrusterPart extends Child {
             },
         });
     }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return "controller" in potential.fileChild && potential.controller.level !== undefined ? new ThrusterPart(potential.fileChild) : undefined;
+    }
 
     get level() {
         return this.fileThruster.controller.level;
@@ -770,6 +824,11 @@ export class HornPart extends Child {
                 data: hornLevels[pitch],
             },
         });
+    }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return potential.shapeId === UUID("Horn") ? new HornPart(potential.fileChild) : undefined;
     }
 
     get pitch() {
@@ -810,6 +869,11 @@ export class DriverSeatPart extends Child {
                 id: getId(),
             },
         });
+    }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return isDriverSeat(potential.shapeId) ? new DriverSeatPart(potential.fileChild) : undefined;
     }
 
     setBearing(
@@ -877,6 +941,11 @@ export class TimerPart extends Child {
             },
         });
     }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return potential.shapeId === UUID("Timer") ? new TimerPart(potential.fileChild) : undefined;
+    }
 
     get delay() {
         return (
@@ -917,6 +986,11 @@ export class LightPart extends Child {
                 luminance: luminance,
             },
         });
+    }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return "controller" in potential && "luminance" in potential.controller ? new LightPart(potential.fileChild) : undefined;
     }
 
     get luminance() {
@@ -961,6 +1035,11 @@ export class TotebotPart extends Child {
                 audioIndex: dance ? 1 : 0,
             },
         });
+    }
+    static convert(potential: Child) {
+        // @ts-ignore
+        // prettier-ignore
+        return "controller" in potential && "audioIndex" in potential.controller ? new TotebotPart(potential.fileChild) : undefined;
     }
 
     get pitch() {
