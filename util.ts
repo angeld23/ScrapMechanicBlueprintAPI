@@ -21,17 +21,7 @@ export function getRotationPositionOffset(
         (xaxis == -2 && zaxis == -3) ||
         (xaxis == -3 && zaxis == 2)
     ) {
-        offset = offset.add(new Vector3(1, 0, 0));
-    }
-    if (
-        xaxis == -3 ||
-        (zaxis == -3 && xAbs != 3) ||
-        (xaxis == 1 && zaxis == 2) ||
-        (xaxis == 2 && zaxis == -1) ||
-        (xaxis == -1 && zaxis == -2) ||
-        (xaxis == -2 && zaxis == 1)
-    ) {
-        offset = offset.add(new Vector3(0, 1, 0));
+        offset = offset.sub(new Vector3(1, 0, 0));
     }
     if (
         xaxis == -2 ||
@@ -41,7 +31,17 @@ export function getRotationPositionOffset(
         (xaxis == -3 && zaxis == -1) ||
         (xaxis == -1 && zaxis == 3)
     ) {
-        offset = offset.add(new Vector3(0, 0, 1));
+        offset = offset.sub(new Vector3(0, 1, 0));
+    }
+    if (
+        xaxis == -3 ||
+        (zaxis == -3 && xAbs != 3) ||
+        (xaxis == 1 && zaxis == 2) ||
+        (xaxis == 2 && zaxis == -1) ||
+        (xaxis == -1 && zaxis == -2) ||
+        (xaxis == -2 && zaxis == 1)
+    ) {
+        offset = offset.sub(new Vector3(0, 0, 1));
     }
     return offset;
 }
