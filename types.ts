@@ -99,7 +99,7 @@ export interface SensorControllerData extends BaseControllerData {
 }
 
 export interface EngineControllerData extends BaseControllerData {
-    /** Base64 Bitser-serialized Lua data for the engine. Always present on unmodified blueprints, but isn't required. */
+    /** Base64-encoded serialized Lua data for the engine. Always present on unmodified blueprints, but isn't required. */
     data?: string;
     /** List of data for bearings that this engine is connected to. Only present if at least one bearing is connected to the engine. */
     joints?: {
@@ -116,7 +116,7 @@ export interface ThrusterControllerData extends BaseControllerData {
 }
 
 export interface HornControllerData extends BaseControllerData {
-    /** Base64 Bitser-serialized Lua data for the horn. Always present on unmodified blueprints, but isn't required. */
+    /** Base64-encoded serialized Lua data for the horn. Always present on unmodified blueprints, but isn't required. */
     data?: string;
 }
 
