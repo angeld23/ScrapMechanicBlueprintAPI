@@ -1086,7 +1086,8 @@ export class Blueprint {
             (fileJoint) => fileJoint !== joint.fileJoint
         );
     }
-    addBody(body: Body): Body {
+    addBody(body?: Body): Body {
+        body = body ?? Body.create();
         this.fileBlueprint.bodies.push(body.fileBody);
         return body;
     }
