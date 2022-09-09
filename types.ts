@@ -71,9 +71,7 @@ export interface ControllerControllerData extends BaseControllerData {
     timePerFrame: number;
 }
 
-export interface LogicGateControllerData
-    extends BaseControllerData,
-        GenericControllerData {
+export interface LogicGateControllerData extends GenericControllerData {
     /** The mode of the logic gate. The possible modes are:
      * 0 = AND
      * 1 = OR
