@@ -1,9 +1,14 @@
 import { Vector3 } from "./class/vector3";
 import partData from "./partData";
-import { FileVector3, LogicMode } from "./types";
+import { getAxisFromTwistsAndFace } from "./rotations";
+import { Face, LogicMode } from "./types";
 import uuids from "./uuids";
 
 export function assume<T>(value: unknown): asserts value is T {}
+
+export function objectOrId(obj: { getId(): number } | number) {
+    return typeof obj === "number" ? obj : obj.getId();
+}
 
 export function getRotationPositionOffset(
     xaxis: number,
@@ -109,8 +114,23 @@ export function getDefaultColor(shapeId: string) {
     return partData[shapeId]?.color ?? "DF7F01";
 }
 
+/**
+ * Retrieves the shapeId of a part from its display name.
+ * @param name The display name of the part.
+ * @returns The shapeId of the part.
+ */
 export function UUID(name: keyof typeof uuids) {
     return uuids[name];
+}
+
+/**
+ * Converts a face and twist count to an axis rotation.
+ * @param face The face to point the axis towards.
+ * @param twists The number of twists to rotate the axis.
+ * @returns The axis rotation.
+ */
+export function Rotation(face: Face = "Forward", twists: 0 | 1 | 2 | 3 = 0) {
+    return getAxisFromTwistsAndFace(twists, face);
 }
 
 const driverSeats = [

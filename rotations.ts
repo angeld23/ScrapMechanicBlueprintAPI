@@ -3,39 +3,39 @@ import { Axis, Face } from "./types";
 const twistsAndFaceToAxis = [
     // 0 twists
     {
-        Bottom: [1, 2],
-        Top: [1, -2],
-        Front: [-3, 1],
+        Down: [1, 2],
+        Up: [1, -2],
+        Forward: [-3, 1],
         Right: [-3, -2],
-        Back: [-3, -1],
+        Backward: [-3, -1],
         Left: [-3, 2],
     },
     // 1 twist
     {
-        Bottom: [2, -1],
+        Down: [2, -1],
         Left: [2, 3],
-        Back: [-1, 3],
-        Top: [-2, -1],
-        Front: [1, 3],
+        Backward: [-1, 3],
+        Up: [-2, -1],
+        Forward: [1, 3],
         Right: [-2, 3],
     },
     // 2 twists
     {
-        Bottom: [-1, -2],
-        Front: [3, -1],
-        Top: [-1, 2],
-        Back: [3, 1],
+        Down: [-1, -2],
+        Forward: [3, -1],
+        Up: [-1, 2],
+        Backward: [3, 1],
         Right: [3, 2],
         Left: [3, -2],
     },
     // 3 twists
     {
-        Bottom: [-2, 1],
-        Top: [2, 1],
+        Down: [-2, 1],
+        Up: [2, 1],
         Left: [-2, -3],
-        Back: [1, -3],
+        Backward: [1, -3],
         Right: [2, -3],
-        Front: [-1, -3],
+        Forward: [-1, -3],
     },
 ];
 

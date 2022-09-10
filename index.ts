@@ -1,4 +1,3 @@
-export * from "./class/partRotation";
 export * from "./class/vector3";
 export * from "./class/blueprint";
 export * from "./types";

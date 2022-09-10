@@ -1,7 +1,10 @@
-export type Face = "Front" | "Back" | "Left" | "Right" | "Top" | "Bottom";
+/** One of six directions for a part to face. */
+export type Face = "Forward" | "Backward" | "Left" | "Right" | "Up" | "Down";
 
+/** The mode for a logic gate. */
 export type LogicMode = "AND" | "OR" | "XOR" | "NAND" | "NOR" | "XNOR";
 
+/** The axis rotation of a part, using two numbers that I seriously have no idea how they work. */
 export type Axis = [xaxis: number, zaxis: number];
 
 export interface FileShape {

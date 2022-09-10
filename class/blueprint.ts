@@ -1,5 +1,4 @@
 import {
-    BaseControllerData,
     ControllerControllerData,
     FileBlueprint,
     FileBody,
@@ -37,20 +36,24 @@ import {
     engineLevels,
     hornLevels,
     isDriverSeat,
+    objectOrId,
 } from "../util";
 import { Vector3 } from "./vector3";
-import { Direction } from "readline";
-import { PartRotation } from "./partRotation";
-import uuids from "../uuids";
 
 let id = 0;
 function getId(): number {
     return id++;
 }
 
+/**
+ * A base class for a part with a color and shapeId.
+ */
 export class Shape {
     constructor(public readonly fileShape: FileShape) {}
 
+    /**
+     * The color of this shape.
+     */
     get color() {
         return this.fileShape.color;
     }
@@ -58,6 +61,9 @@ export class Shape {
         this.fileShape.color = value;
     }
 
+    /**
+     * The shapeId of this shape. Determines the model and behavior in-game.
+     */
     get shapeId() {
         return this.fileShape.shapeId;
     }
@@ -66,6 +72,9 @@ export class Shape {
     }
 }
 
+/**
+ * A base class for a shape contained in a body. Has a position and rotation, and can be connected to other childs (assuming they are both interactable).
+ */
 export class Child extends Shape {
     constructor(public readonly fileChild: FileChild) {
         super(fileChild);
@@ -75,6 +84,11 @@ export class Child extends Shape {
         );
         fileChild._childId = fileChild._childId ?? getId();
     }
+    /**
+     * Attempts to convert a Shape to a Child. Only returns if the Shape's file object is a Child.
+     * @param potential The Shape to convert.
+     * @returns The converted Child, or undefined if the Shape was not a Child.
+     */
     static convert(potential: Shape) {
         // @ts-ignore
         // prettier-ignore
@@ -91,6 +105,9 @@ export class Child extends Shape {
         this.fileChild.pos = this.desiredPosition.sub(rotOffset).toFileVec3();
     }
 
+    /**
+     * The position of this child.
+     */
     get position() {
         return this.desiredPosition;
     }
@@ -99,6 +116,9 @@ export class Child extends Shape {
         this.updateValues();
     }
 
+    /**
+     * The rotation of this child.
+     */
     get rotation(): Axis {
         return [this.fileChild.xaxis, this.fileChild.zaxis];
     }
@@ -108,51 +128,72 @@ export class Child extends Shape {
         this.updateValues();
     }
 
-    checkController() {
+    private checkController() {
         this.fileChild.controller = this.fileChild.controller ?? {
             id: getId(),
         };
     }
 
-    connectTo(other: Child) {
+    /**
+     * Connects this child to another child. Both children must be interactable.
+     * @param other The Child object or the ID of the child to connect to.
+     */
+    connectTo(other: Child | number) {
         this.checkController();
-        const id = other.getId();
+        const id = objectOrId(other);
 
         const casted = this.fileChild.controller as GenericControllerData;
         casted.controllers = casted.controllers ?? [];
         casted.controllers.push({ id: id });
     }
-    disconnectFrom(other: Child) {
+    /**
+     * Disconnects this child from another child.
+     * @param other The Child object or the ID of the child to disconnect from.
+     */
+    disconnectFrom(other: Child | number) {
         this.checkController();
 
         const casted = this.fileChild.controller as GenericControllerData;
         casted.controllers = casted.controllers ?? [];
         casted.controllers = casted.controllers.filter(
-            (controller) => controller.id != other.getId()
+            (controller) => controller.id !== objectOrId(other)
         );
     }
+
+    /**
+     * Gets the ID of the child.
+     * @returns The ID of the child.
+     */
     getId() {
         this.checkController();
         return this.fileChild.controller!.id;
     }
+    /**
+     * Gets a list of the IDs of the children this child is connected to.
+     * @returns The list of IDs.
+     */
     getConnectedIds() {
         this.checkController();
         const casted = this.fileChild.controller as GenericControllerData;
         return casted.controllers?.map((controller) => controller.id) ?? [];
     }
-
-    get shapeId() {
-        return this.fileChild.shapeId;
-    }
-    set shapeId(value) {
-        this.fileChild.shapeId = value;
-    }
 }
 
+/**
+ * Represents any non-block part.
+ */
 export class Part extends Child {
     constructor(public readonly filePart: FileChild) {
         super(filePart);
     }
+    /**
+     * Creates a part.
+     * @param shapeId The shapeId of the part.
+     * @param position The position of the part.
+     * @param rotation The rotation of the part.
+     * @param color The color of the part. Fallbacks to the part's default color.
+     * @returns The created part.
+     */
     static create(
         shapeId: string,
         position: Vector3,
@@ -169,11 +210,20 @@ export class Part extends Child {
             color: color ?? getDefaultColor(shapeId),
         });
     }
+
+    /**
+     * Attempts to convert a Child to a Part. Only returns if the Child's file object is a Part.
+     * @param potential The Child to convert.
+     * @returns The converted Part, or undefined if the Child was not a Part.
+     */
     static convert(potential: Child) {
         return new Part(potential.fileChild);
     }
 }
 
+/**
+ * Represents a group of blocks.
+ */
 export class Blocks extends Child {
     constructor(
         public readonly fileBlocks: FileChild & {
@@ -182,6 +232,14 @@ export class Blocks extends Child {
     ) {
         super(fileBlocks);
     }
+    /**
+     * Creates a group of blocks.
+     * @param shapeId The shapeId of the group of blocks.
+     * @param position The position of the group of blocks.
+     * @param bounds The bounds of the group of blocks.
+     * @param color The color of the group of blocks. Fallbacks to the block's default color.
+     * @returns The created group of blocks.
+     */
     static create(
         shapeId: string,
         position: Vector3,
@@ -197,12 +255,20 @@ export class Blocks extends Child {
             bounds: bounds.toFileVec3(),
         });
     }
+    /**
+     * Attempts to convert a Child to Blocks. Only returns if the Child's file object is Blocks.
+     * @param potential The Child to convert.
+     * @returns The converted Blocks, or undefined if the Child was not Blocks.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return "bounds" in potential.fileChild ? new Blocks(potential.fileChild) : undefined;
     }
 
+    /**
+     * The bounds of the group of blocks.
+     */
     get bounds() {
         return Vector3.fromFileVec3(this.fileBlocks.bounds);
     }
@@ -211,6 +277,9 @@ export class Blocks extends Child {
     }
 }
 
+/**
+ * A base class for a joint. (Bearing, Piston, etc.)
+ */
 export class Joint extends Shape {
     private desiredPosition: Vector3;
     constructor(public readonly fileJoint: FileJoint) {
@@ -254,6 +323,9 @@ export class Joint extends Shape {
         this.fileJoint.posB = this.fileJoint.posA;
     }
 
+    /**
+     * The position of this joint.
+     */
     get position() {
         return this.desiredPosition;
     }
@@ -262,6 +334,9 @@ export class Joint extends Shape {
         this.updateValues();
     }
 
+    /**
+     * The rotation of this joint.
+     */
     get rotation(): Axis {
         return [this.fileJoint.xaxisA, this.fileJoint.zaxisA];
     }
@@ -273,11 +348,18 @@ export class Joint extends Shape {
         this.updateValues();
     }
 
+    /**
+     * Gets the ID of this joint.
+     * @returns The ID.
+     */
     getId() {
         return this.fileJoint.id;
     }
 }
 
+/**
+ * Represents a piston joint.
+ */
 export class PistonJoint extends Joint {
     constructor(
         public readonly fileJoint: FileJoint & {
@@ -286,6 +368,17 @@ export class PistonJoint extends Joint {
     ) {
         super(fileJoint);
     }
+    /**
+     * Creates a piston joint.
+     * @param position The position of the piston joint.
+     * @param rotation The rotation of the piston joint.
+     * @param childA The first child of the piston joint.
+     * @param childB The second child of the piston joint. Optional.
+     * @param color The color of the piston joint. Fallbacks to the piston's default color.
+     * @param length The length of the piston joint. Unused if the piston is connected to a controller. Defaults to 1.
+     * @param speed The speed of the piston joint. Unused if the piston is connected to a controller. Defaults to 1.
+     * @returns The created piston joint.
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -315,6 +408,11 @@ export class PistonJoint extends Joint {
         piston.updateValues();
         return piston;
     }
+    /**
+     * Attempts to convert a Joint to PistonJoint. Only returns if the Joint's file object is a PistonJoint.
+     * @param potential The Joint to convert.
+     * @returns The converted PistonJoint, or undefined if the Joint was not a PistonJoint.
+     */
     static convert(potential: Joint) {
         // @ts-ignore
         // prettier-ignore
@@ -330,6 +428,9 @@ export class PistonJoint extends Joint {
             .toFileVec3();
     }
 
+    /**
+     * The length of the piston joint.
+     */
     get length() {
         return this.fileJoint.controller.length;
     }
@@ -337,6 +438,9 @@ export class PistonJoint extends Joint {
         this.fileJoint.controller.length = value;
     }
 
+    /**
+     * The speed of the piston joint.
+     */
     get speed() {
         return this.fileJoint.controller.speed;
     }
@@ -345,6 +449,9 @@ export class PistonJoint extends Joint {
     }
 }
 
+/**
+ * Represents a bearing joint.
+ */
 export class BearingJoint extends Joint {
     constructor(
         public readonly fileJoint: FileJoint & {
@@ -353,7 +460,21 @@ export class BearingJoint extends Joint {
     ) {
         super(fileJoint);
     }
+    /**
+     * Creates a bearing.
+     * @param position The position of the bearing.
+     * @param rotation The rotation of the bearing.
+     * @param childA The first child of the bearing.
+     * @param childB The second child of the bearing. Optional.
+     * @param color The color of the bearing. Fallbacks to the bearing's default color.
+     * @returns The created bearing.
+     */
     static create = Joint._internalCreate.bind(undefined, UUID("Bearing"));
+    /**
+     * Attempts to convert a Joint to BearingJoint. Only returns if the Joint's file object is a BearingJoint.
+     * @param potential The Joint to convert.
+     * @returns The converted BearingJoint, or undefined if the Joint was not a BearingJoint.
+     */
     static convert(potential: Joint) {
         // @ts-ignore
         // prettier-ignore
@@ -361,6 +482,9 @@ export class BearingJoint extends Joint {
     }
 }
 
+/**
+ * Represents a suspension joint.
+ */
 export class SuspensionJoint extends Joint {
     constructor(
         public readonly fileJoint: FileJoint & {
@@ -369,6 +493,17 @@ export class SuspensionJoint extends Joint {
     ) {
         super(fileJoint);
     }
+    /**
+     * Creates a suspension joint.
+     * @param position The position of the suspension joint.
+     * @param rotation The rotation of the suspension joint.
+     * @param childA The first child of the suspension joint.
+     * @param childB The second child of the suspension joint. Optional.
+     * @param color The color of the suspension joint. Fallbacks to the suspension's default color.
+     * @param sportSuspension Whether the suspension is a sport suspension. Defaults to false.
+     * @param stiffness The stiffness of the suspension. Defaults to 6.
+     * @returns
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -401,6 +536,11 @@ export class SuspensionJoint extends Joint {
         suspension.updateValues();
         return suspension;
     }
+    /**
+     * Attempts to convert a Joint to SuspensionJoint. Only returns if the Joint's file object is a SuspensionJoint.
+     * @param potential The Joint to convert.
+     * @returns The converted SuspensionJoint, or undefined if the Joint was not a SuspensionJoint.
+     */
     static convert(potential: Joint) {
         // @ts-ignore
         // prettier-ignore
@@ -419,6 +559,9 @@ export class SuspensionJoint extends Joint {
             .toFileVec3();
     }
 
+    /**
+     * The stiffness of the suspension joint.
+     */
     get stiffnessLevel() {
         return this.fileJoint.controller.stiffnessLevel;
     }
@@ -427,6 +570,9 @@ export class SuspensionJoint extends Joint {
     }
 }
 
+/**
+ * Represents a Controller.
+ */
 export class ControllerPart extends Child {
     constructor(
         private fileController: FileChild & {
@@ -435,6 +581,15 @@ export class ControllerPart extends Child {
     ) {
         super(fileController);
     }
+    /**
+     * Creates a controller.
+     * @param position The position of the controller.
+     * @param rotation The rotation of the controller.
+     * @param color The color of the controller. Fallbacks to the controller's default color.
+     * @param looped Whether the controller is looped. Defaults to false.
+     * @param timePerFrame The time per frame of the controller. Defaults to 1.
+     * @returns The created controller.
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -457,12 +612,24 @@ export class ControllerPart extends Child {
             },
         });
     }
+    /**
+     * Attempts to convert a Child to ControllerPart. Only returns if the Child's file object is a ControllerPart.
+     * @param potential The Child to convert.
+     * @returns The converted ControllerPart, or undefined if the Child was not a ControllerPart.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return "controller" in potential.fileChild && potential.fileChild.controller.timePerFrame !== undefined ? new ControllerPart(potential.fileChild) : undefined;
     }
 
+    /**
+     * Adds or updates a sequence for a joint in the controller.
+     * @param index The index of the sequence. Controls where in the UI the sequence is.
+     * @param joint The piston or bearing to add or update.
+     * @param sequence The sequence of frames to add or update. The first element is the starting frame, when the controller is off. Missing values are filled in. Any items in the array past index 10 are ignored.
+     * @param reversed Whether positive angles will spin the bearing counter-clockwise (looking from the front). Only applies when this sequence is for a bearing. Defaults to false.
+     */
     setSequence(
         index: number,
         joint: PistonJoint | BearingJoint,
@@ -477,9 +644,12 @@ export class ControllerPart extends Child {
             controller.controllers = controller.controllers ?? [];
             assume<PistonJoint>(joint);
             const frames: { setting: number }[] = [];
+            let last = 0;
             for (let i = 0; i < 11; i++) {
-                frames.push({ setting: sequence[i] ?? 0 });
+                frames.push({ setting: sequence[i] ?? last });
+                if (sequence[i] !== undefined) last = sequence[i];
             }
+
             controller.controllers.push({
                 index: index,
                 id: joint.getId(),
@@ -505,22 +675,30 @@ export class ControllerPart extends Child {
             });
         }
     }
-    removeSequence(joint: PistonJoint | BearingJoint) {
+    /**
+     * Removes a sequence for a given joint from the controller if it exists.
+     * @param joint The piston or bearing to remove the sequence for. Can be an ID.
+     */
+    removeSequence(joint: PistonJoint | BearingJoint | number) {
         const controller = this.fileController.controller;
 
+        const id = objectOrId(joint);
         if (controller.joints) {
-            controller.joints = controller.joints.filter(
-                (j) => j.id !== joint.getId()
-            );
+            controller.joints = controller.joints.filter((j) => j.id !== id);
         }
         if (controller.controllers) {
             // @ts-ignore -- for some reason it's screaming at me so whatever
             controller.controllers = controller.controllers.filter(
-                (j) => j.id !== joint.getId()
+                (j) => j.id !== id
             );
         }
     }
-    getSequence(joint: PistonJoint | BearingJoint):
+    /**
+     * Retrieves the sequence for a given joint if it exists.
+     * @param joint The piston or bearing to retrieve the sequence for.
+     * @returns The sequence of the joint, or undefined if it does not exist.
+     */
+    getSequence(joint: PistonJoint | BearingJoint | number):
         | {
               frames: number[];
               reversed: boolean;
@@ -529,10 +707,9 @@ export class ControllerPart extends Child {
         const controller = this.fileController
             .controller as ControllerControllerData;
 
+        const id = objectOrId(joint);
         if (controller.joints) {
-            const jointController = controller.joints.find(
-                (j) => j.id === joint.getId()
-            );
+            const jointController = controller.joints.find((j) => j.id === id);
             if (jointController) {
                 return {
                     frames: [
@@ -545,7 +722,7 @@ export class ControllerPart extends Child {
         }
         if (controller.controllers) {
             const jointController = controller.controllers.find(
-                (j) => j.id === joint.getId()
+                (j) => j.id === id
             );
             if (jointController) {
                 return {
@@ -555,6 +732,10 @@ export class ControllerPart extends Child {
             }
         }
     }
+    /**
+     * Gets a list of the IDs of all joints this controller is connected to.
+     * @returns The list of joint IDs.
+     */
     getConnectedJointIds() {
         const controller = this.fileController.controller;
         const joints: number[] = [];
@@ -567,6 +748,9 @@ export class ControllerPart extends Child {
         return joints;
     }
 
+    /**
+     * Whether the controller is looped.
+     */
     get looped() {
         return this.fileController.controller.playMode === 2;
     }
@@ -574,6 +758,9 @@ export class ControllerPart extends Child {
         this.fileController.controller.playMode = value ? 2 : 0;
     }
 
+    /**
+     * The time per frame of the controller.
+     */
     get timePerFrame() {
         return this.fileController.controller.timePerFrame;
     }
@@ -582,6 +769,9 @@ export class ControllerPart extends Child {
     }
 }
 
+/**
+ * Represents a logic gate.
+ */
 export class LogicGatePart extends Child {
     constructor(
         private fileLogicGate: FileChild & {
@@ -590,6 +780,14 @@ export class LogicGatePart extends Child {
     ) {
         super(fileLogicGate);
     }
+    /**
+     * Creates a logic gate.
+     * @param position The position of the logic gate.
+     * @param rotation The rotation of the logic gate.
+     * @param color The color of the logic gate. Fallbacks to the logic gate's default color.
+     * @param mode The mode of the logic gate. Defaults to AND.
+     * @returns The created logic gate.
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -610,12 +808,20 @@ export class LogicGatePart extends Child {
             },
         });
     }
+    /**
+     * Attempts to convert a Child to a LogicGatePart. Only returns if the Child's file object is a LogicGatePart.
+     * @param potential The Child to convert.
+     * @returns The converted LogicGatePart, or undefined if the Child is not a LogicGatePart.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return "controller" in potential.fileChild && potential.fileChild.controller.mode !== undefined ? new LogicGatePart(potential.fileChild) : undefined;
     }
 
+    /**
+     * The mode of the logic gate.
+     */
     get mode(): LogicMode {
         return logicGateModeNames[this.fileLogicGate.controller.mode];
     }
@@ -624,6 +830,9 @@ export class LogicGatePart extends Child {
     }
 }
 
+/**
+ * Represents a sensor.
+ */
 export class SensorPart extends Child {
     constructor(
         private fileSensor: FileChild & {
@@ -632,6 +841,18 @@ export class SensorPart extends Child {
     ) {
         super(fileSensor);
     }
+    /**
+     * Creates a sensor.
+     * @param position The position of the sensor.
+     * @param rotation The rotation of the sensor.
+     * @param color The color of the sensor. Fallbacks to the sensor's default color.
+     * @param range The range of the sensor. Defaults to 10.
+     * @param audioEnabled Whether the sensor plays audio when activated. Defaults to false.
+     * @param buttonMode Whether the sensor will only be active while sensing, instead of toggling when being triggered. Defaults to true.
+     * @param colorMode Whether the sensor will only activate when a block of a certain color is sensed. Defaults to false.
+     * @param filterColor The color to filter for if colorMode is true. Defaults to "FFFFFF".
+     * @returns The created sensor.
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -660,12 +881,20 @@ export class SensorPart extends Child {
             },
         });
     }
+    /**
+     * Attempts to convert a Child to a SensorPart. Only returns if the Child's file object is a SensorPart.
+     * @param potential The Child to convert.
+     * @returns The converted SensorPart, or undefined if the Child is not a SensorPart.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return "controller" in potential.fileChild && potential.fileChild.controller.range !== undefined ? new SensorPart(potential.fileChild) : undefined;
     }
 
+    /**
+     * Whether the sensor plays audio when activated.
+     */
     get audioEnabled() {
         return this.fileSensor.controller.audioEnabled;
     }
@@ -673,6 +902,9 @@ export class SensorPart extends Child {
         this.fileSensor.controller.audioEnabled = value;
     }
 
+    /**
+     * Whether the sensor will only be active while sensing, instead of toggling when being triggered.
+     */
     get buttonMode() {
         return this.fileSensor.controller.buttonMode;
     }
@@ -680,6 +912,9 @@ export class SensorPart extends Child {
         this.fileSensor.controller.buttonMode = value;
     }
 
+    /**
+     * The color to filter for if colorMode is true.
+     */
     get filterColor() {
         return this.fileSensor.controller.color;
     }
@@ -687,6 +922,9 @@ export class SensorPart extends Child {
         this.fileSensor.controller.color = value;
     }
 
+    /**
+     * Whether the sensor will only activate when a block of a certain color is sensed.
+     */
     get colorMode() {
         return this.fileSensor.controller.colorMode;
     }
@@ -694,6 +932,9 @@ export class SensorPart extends Child {
         this.fileSensor.controller.colorMode = value;
     }
 
+    /**
+     * The range of the sensor.
+     */
     get range() {
         return this.fileSensor.controller.range;
     }
@@ -702,6 +943,9 @@ export class SensorPart extends Child {
     }
 }
 
+/**
+ * Represents an engine.
+ */
 export class EnginePart extends Child {
     constructor(
         private fileEngine: FileChild & {
@@ -710,6 +954,15 @@ export class EnginePart extends Child {
     ) {
         super(fileEngine);
     }
+    /**
+     * Creates an engine.
+     * @param position The position of the engine.
+     * @param rotation The rotation of the engine.
+     * @param color The color of the engine. Fallbacks to the engine's default color.
+     * @param level The level of the engine. Defaults to 0.
+     * @param electric Whether the engine is electric. Defaults to false.
+     * @returns The created engine.
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -732,12 +985,19 @@ export class EnginePart extends Child {
             },
         });
     }
+    /**
+     * Attempts to convert a Child to an EnginePart. Only returns if the Child's file object is an EnginePart.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return "controller" in potential.fileChild && potential.fileChild.controller.data !== undefined && potential.shapeId !== UUID("Horn") ? new EnginePart(potential.fileChild) : undefined;
     }
 
+    /**
+     * The level of the engine.
+     * @note Attempting to get this property from an engine in a blueprint saved in-game, without first setting it with this API, has a chance to return 0 instead of the actual level. This is due to some shenanigans with the way engine levels are stored within serialized Lua data.
+     */
     get level() {
         const index = engineLevels.findIndex(
             (l) => l === this.fileEngine.controller.data
@@ -748,11 +1008,44 @@ export class EnginePart extends Child {
         this.fileEngine.controller.data = engineLevels[value];
     }
 
-    getConnectedJointIds() {
+    /**
+     * Adds or updates a connection to a bearing.
+     * @param bearing The bearing to connect to. Can be an ID.
+     * @param reversed Whether the bearing spins counter-clockwise looking from the front. Defaults to false.
+     */
+    setBearing(bearing: BearingJoint | number, reversed = false) {
+        this.disconnectBearing(bearing);
+        const id = objectOrId(bearing);
+        this.fileEngine.controller.joints!.push({
+            id: id,
+            reverse: reversed ? 1 : 0,
+        });
+    }
+
+    /**
+     * Removes a connection to a bearing.
+     * @param bearing The bearing to disconnect from. Can be an ID.
+     */
+    disconnectBearing(bearing: BearingJoint | number) {
+        const id = objectOrId(bearing);
+        this.fileEngine.controller.joints =
+            this.fileEngine.controller.joints?.filter(
+                (bearing) => bearing.id !== id
+            ) ?? [];
+    }
+
+    /**
+     * Gets a list of IDs for any bearings connected to this engine.
+     * @returns
+     */
+    getConnectedBearingIds() {
         return this.fileEngine.controller.joints?.map((j) => j.id) ?? [];
     }
 }
 
+/**
+ * Represents a thruster.
+ */
 export class ThrusterPart extends Child {
     constructor(
         private fileThruster: FileChild & {
@@ -761,6 +1054,14 @@ export class ThrusterPart extends Child {
     ) {
         super(fileThruster);
     }
+    /**
+     * Creates a thruster.
+     * @param position The position of the thruster.
+     * @param rotation The rotation of the thruster.
+     * @param color The color of the thruster. Fallbacks to the thruster's default color.
+     * @param level The level of the thruster. Defaults to 5.
+     * @returns The created thruster.
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -781,12 +1082,18 @@ export class ThrusterPart extends Child {
             },
         });
     }
+    /**
+     * Attempts to convert a Child to a ThrusterPart. Only returns if the Child's file object is a ThrusterPart.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return "controller" in potential.fileChild && potential.fileChild.controller.level !== undefined ? new ThrusterPart(potential.fileChild) : undefined;
     }
 
+    /**
+     * The level of the thruster.
+     */
     get level() {
         return this.fileThruster.controller.level;
     }
@@ -795,6 +1102,9 @@ export class ThrusterPart extends Child {
     }
 }
 
+/**
+ * Represents a horn.
+ */
 export class HornPart extends Child {
     constructor(
         private fileHorn: FileChild & {
@@ -803,6 +1113,14 @@ export class HornPart extends Child {
     ) {
         super(fileHorn);
     }
+    /**
+     * Creates a horn.
+     * @param position The position of the horn.
+     * @param rotation The rotation of the horn.
+     * @param color The color of the horn. Fallbacks to the horn's default color.
+     * @param pitch The pitch of the horn. Defaults to 0.
+     * @returns The created horn.
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -823,12 +1141,21 @@ export class HornPart extends Child {
             },
         });
     }
+    /**
+     * Attempts to convert a Child to a HornPart. Only returns if the Child's file object is a HornPart.
+     * @param potential The Child to convert.
+     * @returns The converted HornPart, or undefined if the Child is not a HornPart.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return potential.shapeId === UUID("Horn") ? new HornPart(potential.fileChild) : undefined;
     }
 
+    /**
+     * The pitch of the horn.
+     * @note Attempting to get this property from a horn in a blueprint saved in-game, without first setting it with this API, has a chance to return 0 instead of the actual pitch. This is due to some shenanigans with the way horn pitches are stored within serialized Lua data.
+     */
     get pitch() {
         const index = hornLevels.findIndex(
             (l) => l === this.fileHorn.controller.data
@@ -840,6 +1167,9 @@ export class HornPart extends Child {
     }
 }
 
+/**
+ * Represents a driver seat.
+ */
 export class DriverSeatPart extends Child {
     constructor(
         private fileDriverSeat: FileChild & {
@@ -848,6 +1178,14 @@ export class DriverSeatPart extends Child {
     ) {
         super(fileDriverSeat);
     }
+    /**
+     * Creates a driver seat.
+     * @param position The position of the driver seat.
+     * @param rotation The rotation of the driver seat.
+     * @param color The color of the driver seat. Fallbacks to the driver seat's default color.
+     * @param saddle Whether the driver seat is a saddle. Defaults to false.
+     * @returns The created driver seat.
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -868,14 +1206,25 @@ export class DriverSeatPart extends Child {
             },
         });
     }
+    /**
+     * Attempts to convert a Child to a DriverSeatPart. Only returns if the Child's file object is a DriverSeatPart.
+     * @param potential The Child to convert.
+     * @returns The converted DriverSeatPart, or undefined if the Child is not a DriverSeatPart.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return isDriverSeat(potential.shapeId) ? new DriverSeatPart(potential.fileChild) : undefined;
     }
 
+    /**
+     * Adds or updates a connection to a bearing for steering.
+     * @param bearing The bearing to connect to. Can be an ID.
+     * @param reverse Determines what direction the bearing turns when pressing A or D. 0 = normal, 1 = reversed. Usually, front-wheel-steering cars will have the bearings set to reversed. Defaults to false.
+     * @param steeringSettings The steering settings for the bearing. Not required.
+     */
     setBearing(
-        bearing: BearingJoint,
+        bearing: BearingJoint | number,
         reverse = false,
         steeringSettings?: Omit<Partial<SteeringSettings>, "id">
     ) {
@@ -894,22 +1243,33 @@ export class DriverSeatPart extends Child {
             });
         }
         controller.joints.push({
-            id: bearing.getId(),
+            id: objectOrId(bearing),
             reverse: reverse ? 1 : 0,
         });
     }
-    disconnectBearing(bearing: BearingJoint) {
+    /**
+     * Removes a connection to a bearing.
+     * @param bearing
+     */
+    disconnectBearing(bearing: BearingJoint | number) {
+        const id = objectOrId(bearing);
         const controller = this.fileDriverSeat.controller;
-        controller.joints =
-            controller.joints?.filter((j) => j.id !== bearing.getId()) ?? [];
+        controller.joints = controller.joints?.filter((j) => j.id !== id) ?? [];
         controller.steering =
-            controller.steering?.filter((j) => j.id !== bearing.getId()) ?? [];
+            controller.steering?.filter((j) => j.id !== id) ?? [];
     }
+    /**
+     * Gets a list of IDs of bearings connected to this driver seat.
+     * @returns The list of IDs.
+     */
     getConnectedBearingIds() {
         return this.fileDriverSeat.controller.joints?.map((j) => j.id) ?? [];
     }
 }
 
+/**
+ * Represents a timer.
+ */
 export class TimerPart extends Child {
     constructor(
         private fileTimer: FileChild & {
@@ -918,11 +1278,20 @@ export class TimerPart extends Child {
     ) {
         super(fileTimer);
     }
+    /**
+     * Creates a timer.
+     * @param position The position of the timer.
+     * @param rotation The rotation of the timer.
+     * @param color The color of the timer. Fallbacks to the timer's default color.
+     * @param seconds The number of seconds the timer should delay signals. Defaults to 0.
+     * @param ticks The number of ticks (1/40s) the timer should delay signals. Added onto the seconds. Defaults to 0.
+     */
     static create(
         position: Vector3,
         rotation: Axis,
         color?: string,
-        delay = 0
+        seconds = 0,
+        ticks = 0
     ) {
         return new TimerPart({
             pos: position
@@ -934,29 +1303,66 @@ export class TimerPart extends Child {
             color: color ?? getDefaultColor(UUID("Timer")),
             controller: {
                 id: getId(),
-                seconds: Math.floor(delay),
-                ticks: Math.floor((delay % 1) * 40),
+                seconds: seconds,
+                ticks: ticks,
             },
         });
     }
+    /**
+     * Attempts to convert a Child to a TimerPart. Only returns if the Child's file object is a TimerPart.
+     * @param potential The Child to convert.
+     * @returns The converted TimerPart, or undefined if the Child is not a TimerPart.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return potential.shapeId === UUID("Timer") ? new TimerPart(potential.fileChild) : undefined;
     }
 
-    get delay() {
+    /**
+     * Gets the number of total seconds (including decimals) the timer delays signals, using both the seconds value and the ticks value.
+     * @returns The number of seconds the timer delays signals.
+     */
+    getDelay() {
         return (
             this.fileTimer.controller.seconds +
             this.fileTimer.controller.ticks / 40
         );
     }
-    set delay(value) {
-        this.fileTimer.controller.seconds = Math.floor(value);
-        this.fileTimer.controller.ticks = Math.floor((value % 1) * 40);
+
+    /**
+     * Sets the number of total seconds (including decimals) the timer delays signals, converting it to seconds and ticks.
+     * @param seconds The number of seconds the timer should delay signals.
+     */
+    setDelay(seconds: number) {
+        this.fileTimer.controller.seconds = Math.floor(seconds);
+        this.fileTimer.controller.ticks = Math.floor((seconds % 1) * 40);
+    }
+
+    /**
+     * The seconds value of the timer's delay.
+     */
+    get seconds() {
+        return this.fileTimer.controller.seconds;
+    }
+    set seconds(value) {
+        this.fileTimer.controller.seconds = value;
+    }
+
+    /**
+     * The ticks value of the timer's delay.
+     */
+    get ticks() {
+        return this.fileTimer.controller.ticks;
+    }
+    set ticks(value) {
+        this.fileTimer.controller.ticks = value;
     }
 }
 
+/**
+ * Represents a light.
+ */
 export class LightPart extends Child {
     constructor(
         private fileLight: FileChild & {
@@ -965,6 +1371,14 @@ export class LightPart extends Child {
     ) {
         super(fileLight);
     }
+    /**
+     * Creates a light.
+     * @param position The position of the light.
+     * @param rotation The rotation of the light.
+     * @param color The color of the light. Fallbacks to the light's default color.
+     * @param luminance The luminance of the light. Defaults to 1.
+     * @returns The created light.
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -985,12 +1399,20 @@ export class LightPart extends Child {
             },
         });
     }
+    /**
+     * Attempts to convert a Child to a LightPart. Only returns if the Child's file object is a LightPart.
+     * @param potential The Child to convert.
+     * @returns The converted LightPart, or undefined if the Child is not a LightPart.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return "controller" in potential.fileChild && "luminance" in potential.fileChild.controller ? new LightPart(potential.fileChild) : undefined;
     }
 
+    /**
+     * The luminance of the light.
+     */
     get luminance() {
         return this.fileLight.controller.luminance;
     }
@@ -999,6 +1421,9 @@ export class LightPart extends Child {
     }
 }
 
+/**
+ * Represents a totebot head.
+ */
 export class TotebotPart extends Child {
     constructor(
         private fileTotebot: FileChild & {
@@ -1007,6 +1432,17 @@ export class TotebotPart extends Child {
     ) {
         super(fileTotebot);
     }
+    /**
+     * Creates a totebot head.
+     * @param position The position of the totebot head.
+     * @param rotation The rotation of the totebot head.
+     * @param color The color of the totebot head. Fallbacks to the totebot head's default color.
+     * @param headType The type of the totebot head. Defaults to "Synth Voice".
+     * @param pitch The pitch of the totebot head (0-1). Defaults to 0.48.
+     * @param volume The volume of the totebot head (0-100). Defaults to 100.
+     * @param dance Whether the totebot's sounds are in dance mode. Defaults to false.
+     * @returns
+     */
     static create(
         position: Vector3,
         rotation: Axis,
@@ -1034,12 +1470,20 @@ export class TotebotPart extends Child {
             },
         });
     }
+    /**
+     * Attempts to convert a Child to a TotebotPart. Only returns if the Child's file object is a TotebotPart.
+     * @param potential The Child to convert.
+     * @returns The converted TotebotPart, or undefined if the Child is not a TotebotPart.
+     */
     static convert(potential: Child) {
         // @ts-ignore
         // prettier-ignore
         return "controller" in potential.fileChild && "audioIndex" in potential.fileChild.controller ? new TotebotPart(potential.fileChild) : undefined;
     }
 
+    /**
+     * The pitch of the totebot head (0-1).
+     */
     get pitch() {
         return this.fileTotebot.controller.pitch;
     }
@@ -1047,6 +1491,9 @@ export class TotebotPart extends Child {
         this.fileTotebot.controller.pitch = value;
     }
 
+    /**
+     * The volume of the totebot head (0-100).
+     */
     get volume() {
         return this.fileTotebot.controller.volume;
     }
@@ -1054,6 +1501,9 @@ export class TotebotPart extends Child {
         this.fileTotebot.controller.volume = value;
     }
 
+    /**
+     * Whether the totebot's sounds are in dance mode.
+     */
     get dance() {
         return this.fileTotebot.controller.audioIndex === 1;
     }
@@ -1061,6 +1511,9 @@ export class TotebotPart extends Child {
         this.fileTotebot.controller.audioIndex = value ? 1 : 0;
     }
 
+    /**
+     * The type of the totebot head.
+     */
     get headType() {
         return this.fileTotebot.shapeId.split(": ")[1] as TotebotType;
     }
@@ -1070,21 +1523,41 @@ export class TotebotPart extends Child {
     }
 }
 
+/**
+ * A collection of children that are part of the same rigid body.
+ */
 export class Body {
     constructor(public readonly fileBody: FileBody) {}
+    /**
+     * Creates a body.
+     * @returns The created body.
+     */
     static create() {
         return new Body({
             childs: [],
         });
     }
 
+    /**
+     * Gets a list of all the children in the body.
+     * @returns The list of children.
+     */
     getChildren() {
         return this.fileBody.childs.map((child) => new Child(child));
     }
+    /**
+     * Adds a child to the body.
+     * @param child The child to add.
+     * @returns The added child.
+     */
     addChild<T extends Child>(child: T): T {
         this.fileBody.childs.push(child.fileChild);
         return child;
     }
+    /**
+     * Removes a child from the body, if it is present.
+     * @param child The child to remove.
+     */
     removeChild(child: Child) {
         this.fileBody.childs = this.fileBody.childs.filter(
             (fileChild) => fileChild !== child.fileChild
@@ -1092,6 +1565,9 @@ export class Body {
     }
 }
 
+/**
+ * Represents an entire blueprint file.
+ */
 export class Blueprint {
     private readonly fileBlueprint: FileBlueprint;
 
@@ -1101,19 +1577,41 @@ export class Blueprint {
             bodies: [],
         };
     }
+    /**
+     * Creates a blank blueprint.
+     * @returns The created blueprint.
+     */
     static create() {
         return new Blueprint();
     }
+    /**
+     * Creates a blueprint from a JSON string.
+     * @param text The JSON string.
+     * @returns The created blueprint.
+     */
     static fromJson(text: string): Blueprint {
         return new Blueprint(JSON.parse(text));
     }
+    /**
+     * Creates a blueprint from a file path.
+     * @param path The file path.
+     * @returns The created blueprint.
+     */
     static fromFile(path: fs.PathOrFileDescriptor): Blueprint {
         return Blueprint.fromJson(fs.readFileSync(path).toString());
     }
 
+    /**
+     * Gets a list of all the bodies in the blueprint.
+     * @returns The list of bodies.
+     */
     getBodies() {
         return this.fileBlueprint.bodies.map((body) => new Body(body));
     }
+    /**
+     * Gets a list of all the joints in the blueprint.
+     * @returns The list of joints.
+     */
     getJoints() {
         return this.fileBlueprint.joints
             ? this.fileBlueprint.joints.map((joint) => {
@@ -1127,6 +1625,10 @@ export class Blueprint {
               })
             : [];
     }
+    /**
+     * Converts the blueprint to a JSON string.
+     * @returns The JSON string.
+     */
     toJSON() {
         const blueprint = JSON.parse(
             JSON.stringify(this.fileBlueprint)
@@ -1149,28 +1651,58 @@ export class Blueprint {
 
         return JSON.stringify(blueprint);
     }
+    /**
+     * Converts the blueprint to a JSON string and writes it to a file.
+     * @param path The file path.
+     */
     writeToFile(path: fs.PathOrFileDescriptor) {
         fs.writeFileSync(path, this.toJSON());
     }
+    /**
+     * Adds a joint to the blueprint.
+     * @param joint The joint to add.
+     * @returns The added joint.
+     */
     addJoint<T extends Joint>(joint: T): T {
         this.fileBlueprint.joints = this.fileBlueprint.joints ?? [];
         this.fileBlueprint.joints.push(joint.fileJoint);
         return joint;
     }
+    /**
+     * Removes a joint from the blueprint, if it is present.
+     * @param joint The joint to remove.
+     */
     removeJoint(joint: Joint) {
         if (!this.fileBlueprint.joints) return;
         this.fileBlueprint.joints = this.fileBlueprint.joints.filter(
             (fileJoint) => fileJoint !== joint.fileJoint
         );
     }
+    /**
+     * Adds a body to the blueprint.
+     * @param body The body to add.
+     * @returns The added body.
+     */
     addBody(body?: Body): Body {
         body = body ?? Body.create();
         this.fileBlueprint.bodies.push(body.fileBody);
         return body;
     }
+    /**
+     * Removes a body from the blueprint, if it is present.
+     * @param body The body to remove.
+     */
     removeBody(body: Body) {
         this.fileBlueprint.bodies = this.fileBlueprint.bodies.filter(
             (fileBody) => fileBody !== body.fileBody
         );
+    }
+    /**
+     * Gets a joint in the blueprint with the given ID if it exists.
+     * @param id The ID of the joint.
+     * @returns The joint, if it exists.
+     */
+    getJointFromId(id: number) {
+        return this.getJoints().find((joint) => joint.getId() === id);
     }
 }
