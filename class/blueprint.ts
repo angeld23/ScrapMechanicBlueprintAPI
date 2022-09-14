@@ -40,9 +40,8 @@ import {
 } from "../util";
 import { Vector3 } from "./vector3";
 
-let id = 0;
 function getId(): number {
-    return id++;
+    return Math.floor(Math.random() * 99999999999);
 }
 
 /**
