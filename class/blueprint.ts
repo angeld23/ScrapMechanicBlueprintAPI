@@ -41,7 +41,7 @@ import {
 import { Vector3 } from "./vector3";
 
 function getId(): number {
-    return Math.floor(Math.random() * 99999999999);
+    return Math.floor(Math.random() * 9999999);
 }
 
 /**
