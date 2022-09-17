@@ -41,7 +41,7 @@ import {
 import { Vector3 } from "./vector3";
 
 function getId(): number {
-    return Math.floor(Math.random() * 9999999);
+    return Math.floor(Math.random() * 2147483640);
 }
 
 /**
@@ -137,7 +137,7 @@ export class Child extends Shape {
      * Connects this child to another child. Both children must be interactable.
      * @param other The Child object or the ID of the child to connect to.
      */
-    connectTo(other: Child | number) {
+    connectTo(other: Child | PistonJoint | number) {
         this.checkController();
         const id = objectOrId(other);
 
@@ -149,7 +149,7 @@ export class Child extends Shape {
      * Disconnects this child from another child.
      * @param other The Child object or the ID of the child to disconnect from.
      */
-    disconnectFrom(other: Child | number) {
+    disconnectFrom(other: Child | PistonJoint | number) {
         this.checkController();
 
         const casted = this.fileChild.controller as GenericControllerData;
